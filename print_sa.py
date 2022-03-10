@@ -84,7 +84,7 @@ deduSASize = len(saList)
 if (sa_project != ""):
     ColorPrint.print_info("Filtering email from %s." % sa_project)
     saList = [n for n in saList if sa_project in n]
-    if (len(saList) == 0):
+    if not saList:
         raise ValueError('No Service Account json file matches %s' % sa_project)
 
 print("Writing SA to file.")

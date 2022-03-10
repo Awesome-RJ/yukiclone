@@ -111,8 +111,7 @@ def parse_args():
     parser.add_argument('--cache', action="store_true",
                         help="for test: cache the remote destination.")
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def gen_rclone_cfg(args):
@@ -161,9 +160,6 @@ def gen_rclone_cfg(args):
                     fp.write(text_to_write)
                 except:
                     sys.exit("failed to write {} to {}".format(args.source_id, output_of_config_file))
-            else:
-                pass
-
             # For destination
             if len(args.destination_id) == 33:
                 folder_or_team_drive_dst = 'root_folder_id'

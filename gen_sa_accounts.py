@@ -22,7 +22,7 @@ sleep_time = 30
 # Create count SAs in project
 def _create_accounts(service,project,count):
     batch = service.new_batch_http_request(callback=_def_batch_resp)
-    for i in range(count):
+    for _ in range(count):
         aid = _generate_id('mfc-')
         batch.add(service.projects().serviceAccounts().create(name='projects/' + project, body={ 'accountId': aid, 'serviceAccount': { 'displayName': aid }}))
     batch.execute()
@@ -50,13 +50,13 @@ def _def_batch_resp(id,resp,exception):
         if str(exception).startswith('<HttpError 429'):
             sleep(sleep_time/100)
         else:
-            print(str(exception))
+            print(exception)
 
 # Project Creation Batch Handler
 def _pc_resp(id,resp,exception):
     global project_create_ops
     if exception is not None:
-        print(str(exception))
+        print(exception)
     else:
         for i in resp.values():
             project_create_ops.append(i)
@@ -66,7 +66,7 @@ def _create_projects(cloud,count):
     global project_create_ops
     batch = cloud.new_batch_http_request(callback=_pc_resp)
     new_projs = []
-    for i in range(count):
+    for _ in range(count):
         new_proj = _generate_id()
         new_projs.append(new_proj)
         batch.add(cloud.projects().create(body={'project_id':new_proj}))
@@ -90,7 +90,13 @@ def _enable_services(service,projects,ste):
 
 # List SAs in project
 def _list_sas(iam,project):
-    resp = iam.projects().serviceAccounts().list(name='projects/' + project,pageSize=100).execute()
+    resp = (
+        iam.projects()
+        .serviceAccounts()
+        .list(name=f'projects/{project}', pageSize=100)
+        .execute()
+    )
+
     if 'accounts' in resp:
         return resp['accounts']
     return []
@@ -180,7 +186,7 @@ def serviceaccountfactory(
     serviceusage = build('serviceusage','v1',credentials=creds)
 
     projs = None
-    while projs == None:
+    while projs is None:
         try:
             projs = _get_projects(cloud)
         except HttpError as e:
@@ -213,18 +219,16 @@ def serviceaccountfactory(
             input("Press Enter to continue...")
 
     if enable_services:
-        ste = []
-        ste.append(enable_services)
+        ste = [enable_services]
         if enable_services == '~':
             ste = selected_projects
         elif enable_services == '*':
             ste = _get_projects(cloud)
-        services = [i + '.googleapis.com' for i in services]
+        services = [f'{i}.googleapis.com' for i in services]
         print('Enabling services')
         _enable_services(serviceusage,ste,services)
     if create_sas:
-        stc = []
-        stc.append(create_sas)
+        stc = [create_sas]
         if create_sas == '~':
             stc = selected_projects
         elif create_sas == '*':
@@ -235,12 +239,9 @@ def serviceaccountfactory(
         try:
             os.mkdir(path)
         except OSError as e:
-            if e.errno == errno.EEXIST:
-                pass
-            else:
+            if e.errno != errno.EEXIST:
                 raise
-        std = []
-        std.append(download_keys)
+        std = [download_keys]
         if download_keys == '~':
             std = selected_projects
         elif download_keys == '*':
@@ -294,15 +295,10 @@ if __name__ == '__main__':
                 inp = input('> ')
                 if inp in inp_options:
                     break
-            if inp in options:
-                args.credentials = inp
-            else:
-                args.credentials = options[int(inp) - 1]
+            args.credentials = inp if inp in options else options[int(inp) - 1]
             print('Use --credentials %s next time to use this credentials file.' % args.credentials)
     if args.quick_setup:
-        opt = '*'
-        if args.new_only:
-            opt = '~'
+        opt = '~' if args.new_only else '*'
         args.services = ['iam','drive']
         args.create_projects = args.quick_setup
         args.enable_services = opt
@@ -327,7 +323,7 @@ if __name__ == '__main__':
             if resp:
                 print('Projects (%d):' % len(resp))
                 for i in resp:
-                    print('  ' + i)
+                    print(f'  {i}')
             else:
                 print('No projects.')
         elif args.list_sas:
